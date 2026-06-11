@@ -1,0 +1,132 @@
+# =============================================================================
+# OpenSpec — config.yaml
+# =============================================================================
+# Configuración del proyecto que el agente recibe en cada generación de
+# artefactos. Sin este archivo bien poblado, el agente improvisa convenciones,
+# inventa patrones y propone soluciones que no encajan con vuestro stack.
+#
+# Ubicación: openspec/config.yaml (relativo a la raíz del repo).
+# Se genera vacío con `openspec init --profile custom`. Reemplaza el archivo
+# generado por este después de inicializar OpenSpec.
+#
+# Estructura:
+# - schema: el pipeline de artefactos a seguir (no tocar para SDD estándar)
+# - context: información del proyecto inyectada en cada llamada al agente
+# - rules: reglas específicas por tipo de artefacto generado
+# =============================================================================
+
+schema: spec-driven
+
+# =============================================================================
+# PROJECT CONTEXT
+# =============================================================================
+# Información que el agente recibe en CADA generación de artefacto.
+# Editad esta sección al inicio de cada proyecto: stack real, arquitectura
+# real, restricciones reales. Cuanto más concreto, mejor el output.
+
+context: |
+  # Producto
+  Expense Tracker — Aplicación web para que equipos pequeños registren,
+  aprueben y reporten gastos menores. Sustituye flujos manuales basados
+  en hojas de cálculo y correos de aprobación.
+
+  # Stack tecnológico
+  - Backend: Node.js 22 LTS + Express 4 + TypeScript 5 en modo estricto
+  - ORM: Prisma 5 con PostgreSQL 16
+  - Frontend: React 18 + Vite 5 + TypeScript 5 estricto
+  - Validación: Zod en backend (controladores) y frontend (react-hook-form + resolver)
+  - Testing: Vitest 1 en backend y frontend; React Testing Library para componentes
+  - Entorno local: docker-compose levantando solo PostgreSQL
+  - CI: GitHub Actions ejecutando build + tests en cada PR
+
+  # Arquitectura del backend
+  Arquitectura por capas (Clean Architecture mínima, sin sobreingeniería):
+  - src/domain/         entidades, value objects, errores de dominio
+  - src/application/    casos de uso, servicios
+  - src/infrastructure/ cliente Prisma, repositorios, adaptadores
+  - src/api/            controladores Express, middleware, schemas Zod
+
+  No usamos CQRS, MediatR ni Event Sourcing. El dominio es simple
+  (una sola entidad agregada: Expense) y cabe en una arquitectura plana.
+
+  # API
+  REST con prefijo /api/v1.
+  Respuestas JSON.
+  Errores con shape { error: string, details?: unknown } y código HTTP semántico.
+  Endpoints de transición de estado (aprobar, rechazar) usan POST.
+  Mutaciones de recurso completo usan PUT.
+
+  # Modelo de datos
+  Entidad única: Expense (id, date, amount, currency, category, description,
+  author, status, createdAt, updatedAt, approvedAt, rejectedAt, rejectionReason).
+  Status como enum: Pending | Approved | Rejected.
+
+  # Convenciones de código
+  - TypeScript modo estricto en backend y frontend.
+  - ESM modules (`"type": "module"` en package.json).
+  - camelCase para variables y funciones, PascalCase para clases, types y
+    componentes React, UPPER_SNAKE_CASE para constantes.
+  - Archivos: kebab-case en backend (expense.service.ts), PascalCase para
+    componentes React (ExpenseForm.tsx), camelCase para hooks (useExpenses.ts)
+    y utilidades.
+  - async/await preferido sobre Promise.then.
+  - Sin `any` salvo en type assertions justificadas para librerías externas.
+
+  # Validación
+  Toda entrada externa pasa por un schema Zod, tanto en la API
+  (req.body, req.query, req.params) como en formularios del frontend.
+  Los schemas viven en src/api/schemas/ (backend) y src/lib/schemas/ (frontend).
+
+# =============================================================================
+# RULES PER ARTIFACT
+# =============================================================================
+# Reglas que el agente debe respetar al generar cada tipo de artefacto del
+# pipeline SDD. Editar con cuidado: las reglas demasiado restrictivas
+# generan fricción; las demasiado laxas dejan al agente improvisar.
+
+rules:
+  proposal:
+    - Mantén las proposals concisas pero incluye siempre una sección "Non-goals" explícita.
+    - Lista las capacidades afectadas con nombres claros en kebab-case.
+    - La sección "Why" debe vincular el cambio a un objetivo del PRD o a un problema concreto.
+
+  specs:
+    - Usa formato WHEN/THEN/AND para todos los escenarios.
+    - Mínimo 2 escenarios por requisito (happy path + edge case o error).
+    - Incluye los requisitos no funcionales (NFR) cuando apliquen.
+    - Cubre casos de error y estados inválidos, no solo el happy path.
+
+  design:
+    - Incluye al menos un diagrama Mermaid (arquitectura, flujo de datos o secuencia).
+    - Documenta todas las decisiones técnicas con formato D-XX, incluyendo
+      Decision, Rationale, Alternatives Considered y Trade-offs.
+    - Incluye una sección Risks/Trade-offs identificando potenciales problemas.
+    - Para cada endpoint nuevo, incluye request/response schemas (TypeScript types o JSON).
+
+  tasks:
+    - Divide en tareas de máximo 2 horas cada una.
+    - Incluye tareas de verificación al final de cada grupo-- tests, lint, type-check.
+    - Agrupa por área-- backend, frontend, infraestructura, tests.
+    - Actualiza el checklist en tiempo real a medida que se completan tareas.
+
+  code:
+    - TypeScript strict mode obligatorio en backend y frontend.
+    - No introduzcas `any` excepto en type assertions justificadas para librerías externas.
+    - Usa async/await; evita Promise.then.
+    - Respeta la separación de capas - domain no importa de infrastructure;
+      api no llama directamente a Prisma sin pasar por application/infrastructure.
+    - Componentes React funcionales con hooks; no introduzcas clases.
+    - Para formularios React usa siempre react-hook-form + resolver de Zod.
+
+  tests:
+    - Cobertura mínima 80% backend y 70% frontend con lógica.
+    - Co-loca los tests con el código (*.test.ts, *.spec.tsx) en lugar de carpetas tests/ separadas.
+    - Usa Vitest en ambos lados; nunca mezcles con Jest.
+    - Mock Prisma con vitest-mock-extended en tests de servicios.
+    - No testees el código generado por Prisma; testea tu lógica de negocio.
+
+  integration:
+    - Los archivos nuevos van en la capa que corresponde según la arquitectura.
+    - No introduzcas nuevas dependencias npm sin justificación explícita en design.md.
+    - Reutiliza los schemas Zod existentes si ya cubren el caso.
+    - Mantén consistencia de naming con los archivos hermanos del directorio.
