@@ -1,0 +1,65 @@
+name: Build & Test
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # ---- Setup del runtime ----
+      # Sustituye este bloque por el setup de tu stack.
+      # Ejemplos:
+      #
+      #   # Node.js (default del bundle del taller)
+      #   - uses: actions/setup-node@v4
+      #     with:
+      #       node-version: '22'
+      #       cache: 'npm'
+      #
+      #   # .NET
+      #   - uses: actions/setup-dotnet@v4
+      #     with: { dotnet-version: '8.x' }
+      #
+      #   # Python
+      #   - uses: actions/setup-python@v5
+      #     with: { python-version: '3.12' }
+      - name: Setup runtime
+        uses: actions/setup-node@v4
+        with:
+          node-version: '{{NODE_VERSION}}'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: {{INSTALL_COMMAND}}
+
+      - name: Lint / typecheck
+        run: {{LINT_COMMAND}}
+
+      - name: Build
+        run: {{BUILD_COMMAND}}
+
+      - name: Test
+        run: {{TEST_COMMAND}}
+
+      # ---- Validación de OpenSpec ----
+      # Catchea spec drift en CI antes de que llegue a main.
+      - name: Install OpenSpec CLI
+        run: npm install -g @fission-ai/openspec
+
+      - name: Validate all open changes
+        run: |
+          if [ -d openspec/changes ]; then
+            for change in openspec/changes/*/; do
+              name=$(basename "$change")
+              if [ "$name" != "archive" ]; then
+                openspec validate "$name"
+              fi
+            done
+          fi

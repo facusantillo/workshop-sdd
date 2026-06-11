@@ -1,0 +1,77 @@
+# AGENTS.md — {{PROJECT_NAME}}
+
+> Instrucciones vendor-neutral para agentes de IA que trabajen en este repositorio (Claude Code, Cursor, Cline, Aider, etc.).
+>
+> Si eres GitHub Copilot, lee `.github/copilot-instructions.md` en su lugar.
+> Si eres Claude Code, lee TAMBIÉN `CLAUDE.md` para los addenda específicos.
+
+---
+
+## Qué es este proyecto
+
+{{ONE_LINE_DESCRIPTION}}
+
+**Source of truth para decisiones de producto:** {{ROADMAP_LOCATION}}.
+**Source of truth para specs aceptadas:** `openspec/specs/`.
+
+## Stack
+
+- {{LANGUAGE_AND_VERSION}}
+- {{BACKEND_FRAMEWORK}}
+- {{FRONTEND_FRAMEWORK}}
+- {{DATABASE}} + {{ORM}}
+- {{TEST_FRAMEWORK}}
+- CI: {{CI_TOOL}}
+
+## Cómo entregamos cambios — Spec-Driven Development (SDD)
+
+```
+explore → propose → apply → verify → archive → PR
+```
+
+1. **Explore** — investiga el codebase, aflora unknowns, sopesa alternativas. **Sin escribir código.**
+2. **Propose** — genera `proposal.md` + `design.md` + spec deltas + `tasks.md` bajo `openspec/changes/<name>/`.
+3. **Apply** — implementa tareas una a una. Actualiza `tasks.md` sobre la marcha.
+4. **Verify** — build verde, tests pasan, specs reflejan el código (sin drift).
+5. **Archive** — sync de delta specs en `openspec/specs/`. Mueve el change a `openspec/changes/archive/`.
+6. **PR + CI** — abre PR con `Closes #<n>`; auto-merge cuando CI pase.
+
+Si tu runtime soporta slash commands, el flujo es:
+
+```
+/opsx:explore "<title>"
+/opsx:propose "<title>"
+/opsx:apply "<change-name>"
+/opsx:verify "<change-name>"
+/opsx:archive "<change-name>"
+```
+
+Si no: lee los prompts en `.claude/commands/opsx/*.md` y sigue los pasos manualmente.
+
+## Reglas duras
+
+- ✅ Lee `openspec/specs/` antes de proponer nada nuevo. Esos son requisitos aceptados.
+- ✅ Actualiza los checkboxes de `openspec/changes/<name>/tasks.md` al completar cada tarea.
+- ✅ Ejecuta build + tests después de cada cambio sustantivo.
+- ✅ Usa queries parametrizadas para todo acceso a BBDD.
+- ✅ Usa Conventional Commits (`feat(<scope>): …`).
+- ❌ No escribas código sin spec.
+- ❌ No te saltes la fase verify.
+- ❌ No ejecutes operaciones destructivas (`rm -rf`, `git reset --hard`, force-push) sin aprobación del usuario.
+- ❌ No uses `--no-verify` ni te saltes hooks.
+- ❌ No hagas push directo a `main`. Solo vía PR con CI.
+- ❌ No generes planning docs / decision docs / summaries que el usuario no haya pedido.
+
+## Cuando tengas dudas
+
+- Sobre **scope** → pregunta al usuario.
+- Sobre **convenciones** → lee `openspec/config.yaml`.
+- Sobre **el código** → lee el código. No inventes.
+- Sobre **decisiones de producto** → consulta el roadmap. Si sigue sin estar claro, sube la pregunta, no decidas unilateralmente.
+
+## Tono
+
+- Si el usuario escribe en español, contesta en español. El código, specs, commits y PR titles quedan en inglés.
+- Breve. Una frase por update mientras trabajas.
+- Sin preámbulos ("Voy a…", "Déjame…"). Haz la siguiente cosa directamente.
+- Reconoce los bloqueos al momento. No fuerces contra un muro esperando que ceda.

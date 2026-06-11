@@ -1,0 +1,99 @@
+# Instrucciones para GitHub Copilot — {{PROJECT_NAME}}
+
+> Este archivo lo carga GitHub Copilot Chat automáticamente (y las suggestions inline cuando lo soportan) como contexto del repositorio.
+> Mantenlo bajo ~150 líneas para que el context window de Copilot siga siendo útil.
+
+## El proyecto de un vistazo
+
+{{ONE_LINE_DESCRIPTION}}
+
+Stack: {{LANGUAGE_AND_VERSION}}, {{BACKEND_FRAMEWORK}}, {{FRONTEND_FRAMEWORK}}, {{DATABASE}}, {{TEST_FRAMEWORK}}.
+
+## Cómo trabajamos — Spec-Driven Development
+
+Cada cambio relevante se estructura así:
+
+1. **Spec primero** — bajo `openspec/changes/<name>/` (proposal + design + specs + tasks)
+2. **Implementación después** — el código debe encajar con la spec
+3. **Verify** — build + tests + chequeo de spec drift
+4. **Archive** — delta specs se sincronizan en `openspec/specs/`
+5. **PR + CI** — `Closes #<n>` y auto-merge
+
+Si te piden "añade una feature" sin spec:
+
+- Propón crear la spec primero. No generes código directamente.
+- Apunta al usuario a `openspec/changes/` y al workflow de slash commands en `CLAUDE.md`.
+
+Si ya existe una spec para lo que el usuario está implementando, puedes generar código que la siga.
+
+## Convenciones de código
+
+- {{CONVENTION_1}}
+- {{CONVENTION_2}}
+- {{CONVENTION_3}}
+- APIs públicas: doc comments
+- Llamadas a APIs externas: timeout + retry
+- Acceso a BBDD: queries parametrizadas
+
+## Naming
+
+- Archivos: {{FILE_NAMING_CONVENTION}}
+- Clases / types: PascalCase
+- Funciones / métodos: {{FN_NAMING_CONVENTION}}
+- Archivos de test: espejo de la ruta del source bajo {{TEST_DIR}}
+
+## Qué sugerir
+
+- Inline completions para patrones conocidos (estilo del repo existente)
+- Tests cuando el usuario edita source, source cuando el usuario está en un test
+- Refactors solo si el usuario los pide explícitamente
+
+## Qué NO sugerir
+
+- ❌ Nuevas abstracciones para usos hipotéticos futuros
+- ❌ Try/catch envolviendo código que no puede fallar
+- ❌ Comments que solo describen lo que hace la línea siguiente
+- ❌ Mockear la BBDD: usa el fixture en memoria del proyecto ({{IN_MEMORY_FIXTURE}})
+- ❌ console.log / print / debug statements en código completado
+- ❌ Saltarse los commit hooks (`--no-verify`)
+- ❌ Push directo a `main`
+
+## Commit messages
+
+Conventional Commits:
+
+```
+feat(<scope>): <description>
+fix(<scope>): <description>
+docs(<scope>): <description>
+test(<scope>): <description>
+```
+
+Para cambios SDD, incluye el change name:
+
+```
+feat(<change-name>): <one-line summary>
+
+- <bullet 1>
+- <bullet 2>
+
+Closes #<issue-number>
+```
+
+## Cuando te pregunten por un sistema o feature
+
+Antes de responder o generar código:
+
+1. Comprueba si tiene spec en `openspec/specs/`
+2. Lee la spec
+3. Referencia la spec en tu respuesta
+
+Si no existe spec aún y el usuario está implementando: sugiere correr `/opsx:propose` primero (si usa Claude Code) o redactar manualmente los artefactos bajo `openspec/changes/<name>/`.
+
+## Lo que este archivo NO es
+
+- No es un sustituto de `CLAUDE.md` (que tiene el protocolo de sesión largo para Claude Code)
+- No es un sustituto de `openspec/config.yaml` (que tiene el schema completo de contexto del proyecto)
+- No es donde van el PRD / roadmap / decisiones de producto: eso vive en {{ROADMAP_LOCATION}}
+
+Este archivo es solo el contexto mínimo para que Copilot dé suggestions inline decentes y respuestas de chat coherentes.

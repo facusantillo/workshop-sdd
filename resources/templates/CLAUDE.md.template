@@ -1,0 +1,210 @@
+# CLAUDE.md — {{PROJECT_NAME}}
+
+Este archivo define cómo deben funcionar las sesiones de Claude Code en este repositorio. **Léelo entero antes de tocar código.**
+
+> **Filosofía:** Spec-Driven Development. Sin spec no hay código. Sin verify no hay merge.
+
+---
+
+## Sección A: Visión del proyecto
+
+### Qué es {{PROJECT_NAME}}
+
+{{ONE_LINE_DESCRIPTION}}
+
+**Org:** {{ORG_NAME}} — {{GITHUB_URL}}
+
+### Stack tecnológico
+
+| Capa | Tecnología |
+|---|---|
+| Lenguaje | {{LANGUAGE_AND_VERSION}} |
+| Framework backend | {{BACKEND_FRAMEWORK}} |
+| Framework frontend | {{FRONTEND_FRAMEWORK}} |
+| Base de datos | {{DATABASE}} |
+| ORM | {{ORM}} |
+| Tests | {{TEST_FRAMEWORK}} |
+| Build | {{BUILD_TOOL}} |
+| CI/CD | {{CI_TOOL}} |
+| Project board | {{PROJECT_MGMT}} |
+
+### Comandos de build y test
+
+```bash
+# Instalar dependencias
+{{INSTALL_COMMAND}}
+
+# Build
+{{BUILD_COMMAND}}
+
+# Tests
+{{TEST_COMMAND}}
+
+# Lint / typecheck
+{{LINT_COMMAND}}
+```
+
+### Convenciones de código
+
+- {{CONVENTION_1}}
+- {{CONVENTION_2}}
+- {{CONVENTION_3}}
+- Sin números mágicos: usa constantes con nombre o config values
+- Toda llamada a API externa con timeout y retry
+- APIs públicas con doc comments
+
+### Estrategia de branches
+
+| Branch | Propósito |
+|--------|-----------|
+| `main` | Estable, solo CI verde. PR requerido. |
+| `feature/<scope>-<description>` | Trabajo de feature |
+| `fix/<scope>-<description>` | Bug fixes |
+| `docs/<description>` | Cambios solo de docs |
+
+**Nunca hagas commit directo a `main`.** Todos los cambios vía PR con CI verde.
+
+---
+
+## Sección B: Workflow SDD (CRÍTICO)
+
+Este proyecto sigue **Spec-Driven Development (SDD)** usando OpenSpec. Cada cambio pasa por el ciclo completo SDD antes de mergear a `main`. **Sin cowboy coding.**
+
+### Source of truth
+
+- **Roadmap:** {{ROADMAP_LOCATION}} — visión de producto, milestones
+- **OpenSpec specs:** `openspec/specs/` — specs funcionales acumuladas de cambios completados
+- **OpenSpec config:** `openspec/config.yaml` — contexto, stack, convenciones, reglas
+
+### Workflow por cambio
+
+```
+/opsx:explore → /opsx:propose → /opsx:apply → /opsx:verify → /opsx:archive → PR con CI
+```
+
+**Sin spec no se escribe código. Sin verify no se mergea.**
+
+#### Step 1: Explore — `/opsx:explore "<title>"`
+
+Investiga el codebase, identifica unknowns, propone alternativas de diseño. **Read-only.** No se escribe código aquí.
+
+#### Step 2: Propose — `/opsx:propose "<title>"`
+
+Genera los cuatro artefactos:
+
+- `openspec/changes/<name>/proposal.md` — por qué este cambio
+- `openspec/changes/<name>/design.md` — cómo (decisiones formato `D-XX`, diagramas Mermaid)
+- `openspec/changes/<name>/specs/` — escenarios WHEN/THEN por capacidad
+- `openspec/changes/<name>/tasks.md` — tareas de implementación de < 2h
+
+**Tu papel:** revisar TODOS los artefactos. Validar decisiones. Aprobar antes de apply.
+
+#### Step 3: Apply — `/opsx:apply "<change-name>"`
+
+Implementa cada tarea secuencialmente, marca checkboxes a medida, pausa en tareas `[MANUAL]`.
+
+**Tu papel:** monitorea `tasks.md`. Confirma los pasos manuales. **Confía pero verifica.** Si Claude propone un pivot de scope mid-apply, las specs deben actualizarse Y el cambio queda documentado.
+
+#### Step 4: Verify — `/opsx:verify "<change-name>"`
+
+Valida implementación contra specs. Build + tests. Detecta drift. **Requerido antes de archive.**
+
+#### Step 5: Archive — `/opsx:archive "<change-name>"`
+
+Sincroniza delta specs en `openspec/specs/` (source of truth). Mueve el change a `openspec/changes/archive/YYYY-MM-DD-<name>/`. Irreversible sin un cambio de seguimiento.
+
+#### Step 6: PR con CI
+
+```bash
+git add . && git commit -m "feat(<scope>): <title>"
+gh pr create --title "<title>" --base main --assignee @me --body "..."
+gh pr merge $PR_NUM --auto --squash
+```
+
+**Auto-merge es la puerta del merge.** CI es el único bloqueo.
+
+### Transiciones del project board
+
+| Fase | Columna | Hasta cuándo |
+|---|---|---|
+| `/opsx:explore` arranca | **Ready** | fin de propose |
+| `/opsx:apply` arranca | **In progress** | fin de apply |
+| `/opsx:verify` arranca | **In review** | fin de archive |
+| PR mergeado | **Done** | (automático vía `Closes #<n>`) |
+
+**Mueve el ticket ANTES de empezar el trabajo.** Solo así el cycle time mide la realidad.
+
+### Regla del verify-after-action (obligatoria)
+
+Cada llamada CLI que muta estado debe ir seguida de una lectura de verificación. El output del comando original no es prueba de éxito.
+
+| Acción | Verifica con |
+|---|---|
+| `gh issue edit --add-assignee` | `gh issue view <n> --json assignees` |
+| `gh api graphql ... updateProjectV2ItemFieldValue` | re-query del valor del campo |
+| `gh pr merge --auto` | `gh pr view <n> --json autoMergeRequest,state` |
+
+---
+
+## Sección C: Principios operativos
+
+### Cuándo preguntar vs cuándo actuar
+
+Considera siempre la reversibilidad y el blast radius.
+
+**Libre para actuar:**
+
+- Editar archivos, correr tests, build, crear branches locales
+- Leer código en cualquier parte del repo
+- Generar specs
+
+**Confirma primero:**
+
+- Operaciones destructivas (`rm -rf`, `git reset --hard`, force-push)
+- Cambios de estado compartido (push, PR comment, deploy)
+- Cualquier cosa que suba código o datos a terceros
+- Cambios fuera del scope de la tarea actual
+
+### Tono
+
+- Español para chat (o lo que use el usuario).
+- Inglés para código, specs, commit messages, PR titles.
+- Corto y directo. Sin filler. Sin "Voy a…".
+- Una frase por update mientras trabajas.
+
+### Memoria
+
+Tienes memoria persistente en `~/.claude/projects/<este-repo>/memory/`. Úsala para recordar:
+
+- Preferencias del usuario (`feedback_*.md`)
+- Decisiones de proyecto (`project_*.md`)
+- Referencias externas (`reference_*.md`)
+
+**No memorices lo que puedes leer del código.** La memoria es para invariantes que el código no carga, ej: "el usuario prefiere que /opsx:apply sea autónomo", no "la función auth está en src/auth.ts".
+
+### Qué NO hacer
+
+- ❌ Escribir código sin spec
+- ❌ Saltar verify porque "estoy seguro de que funciona"
+- ❌ Bypass de hooks (`--no-verify`) sin aprobación explícita
+- ❌ Refactorizar "ya que estamos" fuera del scope del cambio
+- ❌ Generar planning, decision docs o summaries que el usuario no pidió
+
+---
+
+## Sección D: Quick reference
+
+| Comando | Cuándo |
+|---|---|
+| `/opsx:explore "<title>"` | Inicio de cada PBI — refinar, aflorar unknowns |
+| `/opsx:propose "<title>"` | Después de explore — generar proposal + design + specs + tasks |
+| `/opsx:apply "<name>"` | Después de revisar artefactos — implementar |
+| `/opsx:verify "<name>"` | Después de implementar — validar contra specs |
+| `/opsx:archive "<name>"` | Después de que verify pase — sync specs a `openspec/specs/` |
+| `gh pr create` | Después de archive — abrir PR para CI + review |
+
+### Naming
+
+- Change names: **kebab-case**, sin puntos. ✅ `pbi-1-1-auth-bootstrap` ❌ `pbi-1.1-auth-bootstrap`
+- Branches: `feature/<change-name>` espejo del directorio del change
+- Commits: Conventional Commits — `feat(<scope>): <description>`
