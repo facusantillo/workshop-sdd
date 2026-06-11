@@ -3,7 +3,7 @@
 **Estado:** Draft
 **Versión:** 1.0
 **Autor:** Facundo Santillo Alarcón
-**Última actualización:** Abril 2026
+**Última actualización:** Junio 2026
 
 ---
 
@@ -59,7 +59,7 @@ Expense Tracker ataca estos tres puntos con un sistema mínimo pero suficiente: 
 
 ### Fuera de alcance (MVP)
 
-- Autenticación simple (sin SSO, sin gestión avanzada de roles)
+- Autenticación (sin SSO, sin gestión de usuarios real)
 - Integración directa con software contable externo
 - Gestión de justificantes con OCR o reconocimiento automático
 - Políticas de aprobación configurables por importe o departamento
@@ -83,24 +83,28 @@ Para el MVP los tres perfiles pueden coincidir en la misma persona. No se modela
 
 ### Stack
 
-- **Backend:** .NET 8 Web API con arquitectura por capas (Domain / Application / Infrastructure / Api)
-- **Frontend:** Angular (última LTS)
-- **Persistencia:** PostgreSQL con Entity Framework Core
+- **Backend:** Node.js 22 LTS + Express + TypeScript con arquitectura por capas (domain / application / infrastructure / api)
+- **ORM:** Prisma con PostgreSQL 16
+- **Frontend:** React 18 + Vite + TypeScript
+- **Testing:** Vitest (mismo runner para backend y frontend)
 - **Entorno local:** docker-compose levantando la base de datos
-- **CI:** pipeline que ejecuta build + tests en cada pull request
+- **CI:** GitHub Actions ejecutando build + tests en cada pull request
 
 ### Principios de diseño
 
-- Arquitectura limpia pero mínima: sin MediatR, sin CQRS, sin event sourcing
+- Arquitectura por capas pero mínima: sin patrones sobredimensionados (no CQRS, no event sourcing, no inyección de dependencias compleja)
 - El dominio es simple y cabe en una sola entidad agregada (`Expense`)
-- Persistencia con migraciones EF Core versionadas en el repo
+- Persistencia con migraciones Prisma versionadas en el repo
 - Seed de datos inicial para que el entorno local arranque con contenido
+- Validación de entradas con Zod tanto en backend como en formularios del frontend
+- API REST con prefijo `/api/v1` y respuestas JSON consistentes
 
 ### Restricciones
 
-- El entorno debe levantarse en una máquina nueva con un único comando (`docker-compose up` + migraciones)
+- El entorno debe levantarse en una máquina nueva con `docker-compose up` + `npm install` + `npm run migrate` + `npm run dev`
 - Ninguna feature del MVP requiere configuración externa (SMTP, colas, storage, etc.)
-- Todas las APIs devuelven JSON; el frontend consume directamente la Web API sin BFF intermedio
+- Todas las APIs devuelven JSON; el frontend consume directamente la API sin BFF intermedio
+- TypeScript en modo estricto en backend y frontend (`strict: true`)
 
 ---
 
@@ -108,11 +112,11 @@ Para el MVP los tres perfiles pueden coincidir en la misma persona. No se modela
 
 **Objetivo:** Entregar la primera versión funcional de Expense Tracker que permita a un equipo registrar, aprobar y reportar sus gastos mensuales, sustituyendo los flujos manuales actuales.
 
-**Resultado esperado:** Un sistema web funcional, con backend en .NET y frontend en Angular, capaz de gestionar el ciclo de vida completo de un gasto desde su creación hasta su exportación.
+**Resultado esperado:** Un sistema web funcional, con backend en Node + Express y frontend en React, capaz de gestionar el ciclo de vida completo de un gasto desde su creación hasta su exportación.
 
-**Historias incluidas:** 8
+**Historias incluidas:** 9
 **Dependencias externas:** Ninguna
-**Dependencias internas:** PBI-01 bloquea al resto. PBI-02 a PBI-08 son independientes entre sí.
+**Dependencias internas:** PBI-01 bloquea al resto. PBI-02 a PBI-09 son independientes entre sí.
 
 ## Dependencias entre PBIs
 
@@ -147,16 +151,16 @@ PBI-01 entrega el esqueleto técnico del proyecto. A partir de su merge, las otr
 
 ### Contexto
 
-Este es el primer PBI de la épica. Entrega la base sobre la que el resto de historias van a construir. Debe ser **lo más mínimo posible** manteniendo todo lo necesario para que las siguientes features arranquen sin bloqueos: modelo de dominio base, migraciones, seed, endpoints de salud, frontend vacío pero navegable, docker-compose y CI.
+Este es el primer PBI de la épica. Entrega la base sobre la que el resto de historias van a construir. Debe ser **lo más mínimo posible** manteniendo todo lo necesario para que las siguientes features arranquen sin bloqueos: modelo de dominio base, schema de Prisma con migración inicial, seed, endpoint de salud, frontend vacío pero navegable, docker-compose y CI.
 
 ### Criterios de aceptación
 
 **DADO** un entorno de desarrollo limpio
-**CUANDO** un desarrollador clona el repositorio y ejecuta `docker-compose up` seguido del comando de migraciones
+**CUANDO** un desarrollador clona el repositorio y ejecuta `docker-compose up`, `npm install` y `npm run migrate`
 **ENTONCES** el backend arranca en el puerto configurado, el frontend arranca en el suyo, y la base de datos queda creada con el seed inicial cargado
 
 **DADO** el backend arrancado
-**CUANDO** se consulta el endpoint `GET /health`
+**CUANDO** se consulta el endpoint `GET /api/v1/health`
 **ENTONCES** la respuesta es `200 OK` con un body que incluye el estado de la aplicación y la conectividad con la base de datos
 
 **DADO** el frontend arrancado
@@ -165,7 +169,7 @@ Este es el primer PBI de la épica. Entrega la base sobre la que el resto de his
 
 **DADO** un pull request abierto contra la rama principal
 **CUANDO** el CI se ejecuta
-**ENTONCES** compila la solución completa y ejecuta todos los tests, fallando el pipeline si cualquiera de los dos pasos falla
+**ENTONCES** instala dependencias, compila TypeScript en backend y frontend, ejecuta los tests de ambos, y falla el pipeline si cualquiera de los pasos falla
 
 **DADO** la base de datos recién migrada
 **CUANDO** se consulta la tabla de gastos
@@ -174,30 +178,39 @@ Este es el primer PBI de la épica. Entrega la base sobre la que el resto de his
 ### Alcance técnico
 
 **Backend:**
-- Solución .NET 8 con proyectos separados para Domain, Application, Infrastructure y Api
-- Entidad `Expense` con los campos mínimos: Id, Date, Amount, Category, Description, Author, Status, CreatedAt
-- Value objects para Money (importe + moneda) y Category
-- Estados posibles del gasto: `Pending`, `Approved`, `Rejected`
-- `DbContext` con configuración de la entidad y migraciones iniciales
-- Endpoint `GET /health` que reporta estado de la app y de la base de datos
-- Seed de datos ejecutable al arrancar si la tabla está vacía
+
+- Proyecto Node.js 22 con TypeScript en modo estricto
+- Estructura de carpetas por capas: `src/domain/`, `src/application/`, `src/infrastructure/`, `src/api/`
+- Entidad `Expense` con los campos mínimos: `id`, `date`, `amount`, `currency`, `category`, `description`, `author`, `status`, `createdAt`
+- Estados posibles del gasto: `Pending`, `Approved`, `Rejected` (modelados como enum de Prisma)
+- Esquema Prisma con la entidad `Expense` y migración inicial generada (`prisma/migrations/`)
+- Cliente Prisma instanciado como singleton en `src/infrastructure/prisma.ts`
+- Endpoint `GET /api/v1/health` que reporta estado de la app y de la base de datos (ping a Prisma)
+- Seed de datos ejecutable mediante `npm run seed` (script `prisma/seed.ts`)
+- Validación de payloads con Zod en los controladores
+- Manejo centralizado de errores con middleware de Express
 
 **Frontend:**
-- Aplicación Angular con routing inicial
-- Página de bienvenida en la ruta raíz mostrando nombre y versión
-- Servicio HTTP configurado con la URL base del backend
+
+- Aplicación React 18 con Vite y TypeScript estricto
+- React Router configurado con rutas iniciales (`/` para bienvenida, `/expenses` como placeholder)
+- Página de bienvenida en la ruta raíz mostrando nombre y versión (la versión se lee del `package.json` vía variable de entorno de Vite)
+- Cliente HTTP configurado en `src/lib/api.ts` con la URL base del backend (vía variable de entorno `VITE_API_URL`)
 - Página placeholder para "Gastos" (sin contenido real, solo la ruta preparada)
 
 **Infraestructura:**
-- `docker-compose.yml` levantando PostgreSQL con credenciales de desarrollo y volumen persistente
-- Variables de entorno documentadas en `.env.example`
-- README con instrucciones de arranque
+
+- `docker-compose.yml` levantando PostgreSQL 16 con credenciales de desarrollo y volumen persistente
+- Variables de entorno documentadas en `.env.example` (backend y frontend)
+- README con instrucciones de arranque paso a paso
+- Scripts npm consistentes: `dev`, `build`, `test`, `migrate`, `seed`
 
 **CI:**
-- Pipeline que se ejecuta en cada pull request contra la rama principal
-- Job de build de la solución backend
-- Job de ejecución de tests unitarios
-- El pipeline falla si cualquiera de los dos pasos falla
+
+- Workflow de GitHub Actions que se ejecuta en cada pull request contra la rama principal
+- Job de install + lint + build + test para el backend
+- Job de install + build + test para el frontend
+- El pipeline falla si cualquiera de los pasos falla
 
 ### Fuera de alcance
 
@@ -209,10 +222,10 @@ Este es el primer PBI de la épica. Entrega la base sobre la que el resto de his
 
 ### Preguntas abiertas para refinamiento
 
-- ¿Qué estructura exacta de carpetas seguimos en el backend?
-- ¿La moneda se modela como value object con código ISO o se asume EUR implícito?
-- ¿El seed se ejecuta automáticamente al arrancar o mediante un comando explícito?
-- ¿La versión mostrada en el frontend viene del `package.json`, del backend, o hardcodeada?
+- ¿Monorepo con npm workspaces (un único `package.json` raíz con `backend/` y `frontend/`) o repos separados en carpetas hermanas?
+- ¿La moneda se modela como campo separado del importe (`amount` + `currency`) o se asume EUR implícito sin columna?
+- ¿El seed se ejecuta automáticamente tras `prisma migrate` o requiere un comando explícito (`npm run seed`)?
+- ¿La versión mostrada en el frontend viene del `package.json` del frontend, del backend, o de una variable de build?
 
 ---
 
@@ -245,14 +258,14 @@ Esta es la historia que habilita la entrada de datos al sistema. Sin ella, las d
 
 **DADO** un gasto recién creado
 **CUANDO** se consulta el endpoint de detalle del gasto
-**ENTONCES** devuelve todos los campos del gasto incluyendo `CreatedAt` con el timestamp del momento de creación y `Status` en `Pending`
+**ENTONCES** devuelve todos los campos del gasto incluyendo `createdAt` con el timestamp del momento de creación y `status` en `Pending`
 
 ### Alcance técnico
 
-- Endpoint `POST /api/expenses` que recibe los datos del gasto y devuelve el recurso creado con su identificador
-- Validaciones de entrada en backend (importe, fecha, categoría obligatoria, descripción con longitud mínima)
-- Componente Angular con formulario reactivo, validaciones en cliente y feedback visual de error/éxito
-- Integración con el listado existente (placeholder de PBI-01) para mostrar el gasto recién creado sin recargar la página
+- Endpoint `POST /api/v1/expenses` que recibe los datos del gasto y devuelve el recurso creado con su identificador
+- Validaciones de entrada con Zod en backend (importe positivo, fecha no futura, categoría obligatoria, descripción con longitud mínima)
+- Componente React con `react-hook-form` + resolver de Zod para validación cliente con feedback visual de error y éxito
+- Integración con el listado existente (placeholder de PBI-01) para mostrar el gasto recién creado sin recargar la página (refetch o actualización del estado local)
 
 ### Fuera de alcance
 
@@ -264,7 +277,7 @@ Esta es la historia que habilita la entrada de datos al sistema. Sin ella, las d
 
 - ¿Qué pasa si el usuario introduce un importe con muchos decimales? ¿Redondeamos? ¿Rechazamos?
 - ¿La descripción tiene un mínimo y un máximo de caracteres? ¿Cuáles?
-- ¿El autor del gasto viene de alguna parte o se usa un valor fijo tipo "current-user" durante el MVP?
+- ¿El autor del gasto viene de alguna parte o se usa un valor fijo tipo `"current-user"` durante el MVP?
 
 ---
 
@@ -297,9 +310,9 @@ Esta es la historia que habilita la entrada de datos al sistema. Sin ella, las d
 
 ### Alcance técnico
 
-- Endpoint `GET /api/expenses` con soporte para query parameter `category`
-- Componente de filtro en el frontend (select o chips) integrado en la página de gastos
-- Actualización reactiva del listado al cambiar el filtro
+- Endpoint `GET /api/v1/expenses` con soporte para query parameter `category`
+- Componente de filtro en el frontend (`select` controlado o set de chips) integrado en la página de gastos
+- Actualización reactiva del listado al cambiar el filtro (refetch en cambio de query)
 
 ### Fuera de alcance
 
@@ -309,7 +322,7 @@ Esta es la historia que habilita la entrada de datos al sistema. Sin ella, las d
 ### Preguntas abiertas para refinamiento
 
 - ¿El filtro es un dropdown simple o chips multiselección?
-- ¿El filtro persiste al recargar la página (query string) o se resetea?
+- ¿El filtro persiste al recargar la página (query string en la URL) o se resetea?
 
 ---
 
@@ -338,12 +351,13 @@ Esta es la historia que habilita la entrada de datos al sistema. Sin ella, las d
 
 **DADO** un gasto aprobado
 **CUANDO** se consulta su detalle
-**ENTONCES** incluye los campos `ApprovedAt` y mantiene el estado `Approved` de forma persistente
+**ENTONCES** incluye el campo `approvedAt` y mantiene el estado `Approved` de forma persistente
 
 ### Alcance técnico
 
-- Endpoint `PUT /api/expenses/{id}/approve` idempotente (aprobar algo ya aprobado no debería romper, aunque puede devolver 409)
-- Campo `ApprovedAt` nullable en la entidad `Expense`
+- Endpoint `POST /api/v1/expenses/:id/approve` (verbo POST por ser una acción/transición, no una mutación de recurso)
+- Campo `approvedAt` nullable en el schema de Prisma
+- Transición de estado validada en la capa de aplicación (solo se permite `Pending → Approved`)
 - Botón "Aprobar" en el listado/detalle del frontend, visible solo si el estado es `Pending`
 - Feedback visual claro al cambiar el estado (color, badge, etc.)
 
@@ -380,14 +394,15 @@ Esta es la historia que habilita la entrada de datos al sistema. Sin ella, las d
 
 **DADO** un gasto rechazado
 **CUANDO** se consulta su detalle
-**ENTONCES** incluye el campo `RejectionReason` con el texto introducido y `RejectedAt` con el timestamp
+**ENTONCES** incluye el campo `rejectionReason` con el texto introducido y `rejectedAt` con el timestamp
 
 ### Alcance técnico
 
-- Endpoint `PUT /api/expenses/{id}/reject` que recibe `{ reason: string }` en el body
-- Validación de que el `reason` no sea vacío ni solo whitespace
-- Campos `RejectionReason` y `RejectedAt` en la entidad
+- Endpoint `POST /api/v1/expenses/:id/reject` que recibe `{ reason: string }` en el body
+- Validación con Zod de que el `reason` no sea vacío ni solo whitespace
+- Campos `rejectionReason` y `rejectedAt` en el schema de Prisma (ambos nullable)
 - Diálogo modal en el frontend para capturar el motivo antes de enviar
+- Transición de estado validada (solo se permite `Pending → Rejected`)
 
 ### Preguntas abiertas para refinamiento
 
@@ -422,14 +437,14 @@ Esta es la historia que habilita la entrada de datos al sistema. Sin ella, las d
 
 **DADO** un gasto editado
 **CUANDO** se consulta su detalle
-**ENTONCES** incluye un timestamp `UpdatedAt` que refleja la última modificación
+**ENTONCES** incluye un timestamp `updatedAt` que refleja la última modificación
 
 ### Alcance técnico
 
-- Endpoint `PUT /api/expenses/{id}` con validaciones equivalentes a las de creación
+- Endpoint `PUT /api/v1/expenses/:id` con validaciones equivalentes a las de creación (reutilizando el schema de Zod)
 - Solo permite editar si el estado es `Pending` (devuelve 409 en caso contrario)
-- Campo `UpdatedAt` nullable en la entidad
-- Formulario de edición en frontend, reutilizando el componente de creación si es posible
+- Campo `updatedAt` gestionado automáticamente por Prisma (`@updatedAt`)
+- Formulario de edición en frontend, reutilizando el componente de creación (modo `create` / modo `edit`)
 
 ### Preguntas abiertas para refinamiento
 
@@ -468,7 +483,8 @@ Esta es la historia que habilita la entrada de datos al sistema. Sin ella, las d
 
 ### Alcance técnico
 
-- Endpoint `GET /api/expenses/total` que devuelve `{ totalApproved: number, count: number }`
+- Endpoint `GET /api/v1/expenses/total` que devuelve `{ totalApproved: number, count: number }`
+- Agregación a nivel de base de datos vía Prisma (`aggregate` con `_sum` y `_count`)
 - Componente de KPI en el frontend que consume el endpoint al cargar la página
 - Actualización del KPI cuando cambia el estado de algún gasto (aprobación/rechazo)
 
@@ -509,8 +525,8 @@ Esta es la historia que habilita la entrada de datos al sistema. Sin ella, las d
 
 ### Alcance técnico
 
-- Endpoint `GET /api/expenses/by-category` con la agregación en base de datos
-- Componente de visualización en el frontend (tabla básica es suficiente, gráfico es bonus)
+- Endpoint `GET /api/v1/expenses/by-category` con la agregación en base de datos vía Prisma (`groupBy`)
+- Componente de visualización en el frontend (tabla básica es suficiente; gráfico de barras con `recharts` como mejora opcional)
 
 ### Preguntas abiertas para refinamiento
 
@@ -549,8 +565,8 @@ Esta es la historia que habilita la entrada de datos al sistema. Sin ella, las d
 
 ### Alcance técnico
 
-- Endpoint `GET /api/expenses/export` que devuelve el CSV con los headers HTTP correctos (`Content-Type: text/csv`, `Content-Disposition: attachment; filename=...`)
-- Generación del CSV con escape correcto de caracteres especiales (comas en descripciones, comillas, saltos de línea)
+- Endpoint `GET /api/v1/expenses/export` que devuelve el CSV con los headers HTTP correctos (`Content-Type: text/csv`, `Content-Disposition: attachment; filename=...`)
+- Generación del CSV con escape correcto de caracteres especiales (comas en descripciones, comillas, saltos de línea) — se recomienda usar una librería como `papaparse` para evitar bugs sutiles
 - Botón de exportación en la página de gastos
 
 ### Preguntas abiertas para refinamiento
@@ -569,16 +585,27 @@ Esta es la historia que habilita la entrada de datos al sistema. Sin ella, las d
 expense-tracker/
 ├── backend/
 │   ├── src/
-│   │   ├── ExpenseTracker.Domain/
-│   │   ├── ExpenseTracker.Application/
-│   │   ├── ExpenseTracker.Infrastructure/
-│   │   └── ExpenseTracker.Api/
-│   └── tests/
-│       └── ExpenseTracker.Tests/
+│   │   ├── domain/
+│   │   ├── application/
+│   │   ├── infrastructure/
+│   │   └── api/
+│   ├── prisma/
+│   │   ├── schema.prisma
+│   │   ├── seed.ts
+│   │   └── migrations/
+│   ├── tests/
+│   └── package.json
 ├── frontend/
-│   └── src/app/
+│   ├── src/
+│   │   ├── components/
+│   │   ├── pages/
+│   │   ├── lib/
+│   │   └── App.tsx
+│   └── package.json
 ├── docker-compose.yml
-├── .github/workflows/ci.yml  (o azure-pipelines.yml)
+├── .github/
+│   └── workflows/
+│       └── ci.yml
 └── README.md
 ```
 
