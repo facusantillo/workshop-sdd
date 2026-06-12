@@ -1,4 +1,4 @@
-import { describe, it, expect, afterAll } from 'vitest';
+import { describe, it, expect, afterAll, vi } from 'vitest';
 import request from 'supertest';
 import app from '../api/index.js';
 import prisma from '../infrastructure/prisma.js';
@@ -24,5 +24,25 @@ describe('GET /api/v1/health', () => {
     expect(res.body.version.length).toBeGreaterThan(0);
     expect(typeof res.body.uptime).toBe('number');
     expect(typeof res.body.checks.database.latencyMs).toBe('number');
+  });
+
+  it('returns 503 with degraded status when DB is down', async () => {
+    const spy = vi.spyOn(prisma, '$queryRaw').mockRejectedValueOnce(new Error('DB down'));
+
+    const res = await request(app).get('/api/v1/health');
+
+    spy.mockRestore();
+
+    expect(res.status).toBe(503);
+    expect(res.body).toMatchObject({
+      status: 'degraded',
+      checks: {
+        database: {
+          status: 'down',
+        },
+      },
+    });
+    expect(typeof res.body.version).toBe('string');
+    expect(typeof res.body.uptime).toBe('number');
   });
 });

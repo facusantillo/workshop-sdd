@@ -11,8 +11,6 @@ describe('Welcome page', () => {
   it('renders the version from VITE_APP_VERSION', () => {
     render(<Welcome />);
     const heading = screen.getByRole('heading');
-    // VITE_APP_VERSION is injected at build time by vite.config.ts
-    // In tests it may be undefined or set — either way the component must not crash
-    expect(heading).toBeInTheDocument();
+    expect(heading).toHaveTextContent('Expense Tracker v0.1.0');
   });
 });

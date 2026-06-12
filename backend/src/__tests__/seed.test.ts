@@ -1,8 +1,13 @@
-import { describe, it, expect, afterAll } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import prisma from '../infrastructure/prisma.js';
 import { Category, ExpenseStatus } from '../domain/expense.js';
+import { main as runSeed } from '../../prisma/seed.js';
 
 describe('Seed distribution contract', () => {
+  beforeAll(async () => {
+    await runSeed();
+  });
+
   afterAll(async () => {
     await prisma.$disconnect();
   });

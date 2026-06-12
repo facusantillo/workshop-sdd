@@ -8,7 +8,8 @@
     "build": "tsc",
     "lint": "eslint src --ext .ts",
     "test": "vitest run",
-    "migrate": "prisma migrate dev --name init",
+    "migrate": "prisma migrate deploy",
+    "migrate:dev": "prisma migrate dev",
     "seed": "tsx prisma/seed.ts"
   },
   "dependencies": {

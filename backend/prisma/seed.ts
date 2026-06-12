@@ -1,7 +1,6 @@
-import { PrismaClient } from '@prisma/client';
+import { fileURLToPath } from 'url';
+import prisma from '../src/infrastructure/prisma.js';
 import { MOCK_AUTHOR } from '../src/domain/expense.js';
-
-const prisma = new PrismaClient();
 
 function daysAgo(days: number): Date {
   const d = new Date();
@@ -10,7 +9,7 @@ function daysAgo(days: number): Date {
   return d;
 }
 
-async function main(): Promise<void> {
+export async function main(): Promise<void> {
   // Clear table before seeding to allow re-running
   await prisma.expense.deleteMany();
 
@@ -191,11 +190,13 @@ async function main(): Promise<void> {
   console.log(`[seed] Created ${result.count} expense records.`);
 }
 
-main()
-  .catch((err) => {
-    console.error('[seed] Error:', err);
-    process.exit(1);
-  })
-  .finally(() => {
-    void prisma.$disconnect();
-  });
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  main()
+    .catch((err) => {
+      console.error('[seed] Error:', err);
+      process.exit(1);
+    })
+    .finally(() => {
+      void prisma.$disconnect();
+    });
+}
