@@ -1,0 +1,43 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Category {
+  TRAVEL
+  FOOD
+  SOFTWARE
+  OFFICE
+  OTHER
+}
+
+enum ExpenseStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum Currency {
+  EUR
+  USD
+}
+
+model Expense {
+  id              String        @id @default(cuid())
+  date            DateTime
+  amount          Int
+  currency        Currency      @default(EUR)
+  category        Category
+  description     String
+  author          String
+  status          ExpenseStatus @default(PENDING)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  approvedAt      DateTime?
+  rejectedAt      DateTime?
+  rejectionReason String?
+}
