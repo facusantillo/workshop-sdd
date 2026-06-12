@@ -61,10 +61,10 @@
 - [x] 8.2 Job de backend: install + lint + build + test, con service container `postgres:16`
 - [x] 8.3 Job de frontend: install + lint + build + test
 - [x] 8.4 Asegurar que el pipeline falla si cualquier paso (lint, build o test) falla
-- [ ] 8.5 Verificar: un PR con código válido pasa en verde; uno con lint o test roto falla
+- [x] 8.5 Verificar: un PR con código válido pasa en verde; uno con lint o test roto falla
 
 ## 9. Documentación y cierre
 
 - [x] 9.1 Escribir el README con instrucciones de arranque paso a paso, incluyendo `npm run seed` explícito
-- [ ] 9.2 Verificar end-to-end: clonar limpio → `docker-compose up` → `npm install` → `npm run migrate` → `npm run seed` → backend, frontend y DB operativos
-- [ ] 9.3 Ejecutar lint + type-check + tests completos del monorepo antes de abrir el PR
+- [x] 9.2 Verificar end-to-end: clonar limpio → `docker-compose up` → `npm install` → `npm run migrate` → `npm run seed` → backend, frontend y DB operativos
+- [x] 9.3 Ejecutar lint + type-check + tests completos del monorepo antes de abrir el PR
